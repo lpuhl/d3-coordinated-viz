@@ -1,7 +1,22 @@
 /* Stylesheet by Liz Puhl, 2020 */
 
+h1, h2, p, svg, label, .tooltiptext {
+  font-family: 'Lato', sans-sans-serif;
+  letter-spacing: 0.025em;
+}
+
+h1.head {
+  color: white;
+  padding: 10px 10px 10px 10px;
+  background-color: #756bb1
+}
+
+h2 {
+  color: #756bb1
+}
+
 .munis {
-    fill: #FFF;
+    fill: #FFFFE0	;
     stroke: #CCC;
     stroke-width: 2px;
 }
@@ -67,8 +82,8 @@
 
 .dropdown {
     position: absolute;
-    top: 30px;
-    left: 40px;
+    top: 180px;
+    left: 460px;
     z-index: 10;
     font-family: sans-serif;
     font-size: 1em;
@@ -91,6 +106,7 @@ option {
     border: solid thin #fff;
     padding: 5px 10px;
     top: -75px;
+    z-index: 100;
 }
 
 .infolabel h1 {

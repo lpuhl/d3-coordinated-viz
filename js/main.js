@@ -45,16 +45,16 @@ function setMap() {
   //     promises.push(index ? d3.csv(url) : d3.json(url))
   // });
 
-  Promise.all([d3.csv("data/Mpls_Results_Processed_D.csv"),
-              d3.json("data/Mpls_Precincts_final.topojson"),
-              d3.json("data/Mpls_Bdry.topojson"),
+  Promise.all([d3.csv("data/MSP_PercentagesByWard_Top5.csv"),
+              d3.json("data/MSP_Wards.topojson"),
+              d3.json("data/MSP_Bdry.topojson"),
               d3.json("data/Metro_Munis.topojson")])
       .then(function(data) {
         // console.log('data', data);
 
       var csvData = data[0];
-      var mplsPrecincts = topojson.feature(data[1], data[1].objects.Mpls_Precincts_final).features;
-      var mplsBdry = topojson.feature(data[2], data[2].objects.Mpls_Bdry);
+      var mplsPrecincts = topojson.feature(data[1], data[1].objects.MSP_Wards).features;
+      var mspBdry = topojson.feature(data[2], data[2].objects.MSP_Bdry);
       var allMunis = topojson.feature(data[3], data[3].objects.Metro_Munis);
 
       // use Object.keys to get an array of the attribute values from the CSV
@@ -75,7 +75,7 @@ function setMap() {
       var projection = d3.geoConicConformal()
         .parallels([45 + 37 / 60, 47 + 3 / 60])
         .rotate([94 + 15 / 60, 0])
-        .fitSize([width, height], mplsBdry);
+        .fitSize([width, height], mspBdry);
 
       var path = d3.geoPath()
         .projection(projection);
@@ -99,11 +99,11 @@ function setMap() {
 function joinData (mplsPrecincts, csvData) {
     for (var i=0; i < csvData.length; i++) {
     var csvPrecinct = csvData[i]; //the current precinct
-    var csvKey = csvPrecinct.PCTCODE; //the CSV primary key
-    //loop through geojson precincts to find correct precinct
+    var csvKey = csvPrecinct.WardName; //the CSV primary key
+    //loop through geojson wards to find correct precinct
     for (var j=0; j < mplsPrecincts.length; j++) {
       var geojsonProps = mplsPrecincts[j].properties; //the current precinct geojson properties
-      var geojsonKey = geojsonProps.PCTCODE; //the geojson primary key
+      var geojsonKey = geojsonProps.WardName; //the geojson primary key
       //where primary keys match, transfer csv data to geojson properties object
       if (geojsonKey == csvKey) {
         //assign all attributes and values
@@ -118,13 +118,14 @@ function joinData (mplsPrecincts, csvData) {
 }
 
 function setEnumerationUnits(mplsPrecincts, map, path, colorScale){
-  //add Minneapolis precincts to map
-  var precincts = map.selectAll(".precincts")
+  //add Minneapolis wards to map
+  var wards = map.selectAll(".wards")
       .data(mplsPrecincts)
       .enter()
       .append("path")
       .attr("class", function(d){
-          return "precincts p" + d.properties.PCTCODE;
+          // console.log("wards " + d.properties.WardName.replace(/ /g,"_"));
+          return "wards " + d.properties.WardName.replace(/ /g,"_");
       })
       .attr("d", path)
       .style("fill", function(d){
@@ -132,6 +133,7 @@ function setEnumerationUnits(mplsPrecincts, map, path, colorScale){
         return choropleth(d.properties, colorScale);
       })
       .on("mouseover", function(d){
+          d3.select(this).raise(); // Bring selected ward to the front
           highlight(d.properties);
       })
       .on("mouseout", function(d){
@@ -139,7 +141,7 @@ function setEnumerationUnits(mplsPrecincts, map, path, colorScale){
       })
       .on("mousemove", moveLabel);
 
-  var desc = precincts.append("desc")
+  var desc = wards.append("desc")
       .text('{"stroke": "#000", "stroke-width": "0.5px"}');
 
 
@@ -147,13 +149,19 @@ function setEnumerationUnits(mplsPrecincts, map, path, colorScale){
 
 //Example 1.4 line 11...function to create color scale generator
 function makeColorScale(data){
+  https://colorbrewer2.org/?type=sequential&scheme=Purples&n=5
   var colorClasses = [
-      "#D4B9DA",
-      "#C994C7",
-      "#DF65B0",
-      "#DD1C77",
-      "#980043"
-  ];
+      '#f2f0f7',
+      '#cbc9e2',
+      '#9e9ac8',
+      '#756bb1',
+      '#54278f'
+    ];
+      // "#D4B9DA",
+      // "#C994C7",
+      // "#DF65B0",
+      // "#DD1C77",
+      // "#980043"
 
   //create color scale generator
   var colorScale = d3.scaleThreshold()
@@ -221,7 +229,7 @@ function setChart(csvData, colorScale){
             return b[expressed]-a[expressed]
         })
         .attr("class", function(d){
-            return "bars p" + d.PCTCODE;
+            return "bars " + d.WardName.replace(/ /g,"_");
         })
         .attr("width", chartInnerWidth / csvData.length - 1)
         .on("mouseover", highlight)
@@ -241,7 +249,7 @@ function setChart(csvData, colorScale){
     //         return a[expressed]-b[expressed]
     //     })
     //     .attr("class", function(d){
-    //         return "numbers " + d.PCTCODE;
+    //         return "numbers " + d.WardName;
     //     })
     //     .attr("text-anchor", "middle")
     //     .attr("x", function(d, i){
@@ -295,7 +303,7 @@ function createDropdown(csvData){
     var titleOption = dropdown.append("option")
         .attr("class", "titleOption")
         .attr("disabled", "true")
-        .text("Select Attribute");
+        .text("Select Candidate");
 
     //add attribute name options
     var attrOptions = dropdown.selectAll("attrOptions")
@@ -315,7 +323,7 @@ function changeAttribute(attribute, csvData){
     var colorScale = makeColorScale(csvData);
 
     //recolor enumeration units
-    var precincts = d3.selectAll(".precincts")
+    var wards = d3.selectAll(".wards")
         .transition()
         .duration(1000)
         .style("fill", function(d){
@@ -356,7 +364,7 @@ function updateChart(bars, n, colorScale){
         });
 
     var chartTitle = d3.select(".chartTitle")
-      .text("Votes for " + expressed + " in each precinct");
+      .text(expressed + "\'s vote share by ward");
     console.log('chartTitle', chartTitle);
 };
 
@@ -364,16 +372,16 @@ function updateChart(bars, n, colorScale){
 function highlight(props){
   // console.log(props);
    //change stroke
-  var selected = d3.selectAll(".p" + props.PCTCODE)
-     .style("stroke", "blue")
+  var selected = d3.selectAll("." + props.WardName.replace(/ /g,"_"))
+     .style("stroke", "yellow")
      .style("stroke-width", "2");
-
+  // console.log('selected', selected);
   setLabel(props);
 };
 
 //function to reset the element style on mouseout
 function dehighlight(props){
-   var selected = d3.selectAll(".p" + props.PCTCODE)
+   var selected = d3.selectAll("." + props.WardName.replace(/ /g,"_"))
        .style("stroke", function(){
            return getStyle(this, "stroke")
        })
@@ -400,18 +408,18 @@ function dehighlight(props){
 function setLabel(props){
     //label content
     var labelAttribute = "<h1>" + props[expressed] +
-        "</h1><b>" + expressed + "</b>";
+        "%</h1><b>" + expressed + "</b>";
 
     //create info label div
     var infolabel = d3.select("body")
         .append("div")
         .attr("class", "infolabel")
-        .attr("id", "p" + props.PCTCODE + "_label")
+        .attr("id", "p" + props.WardName + "_label")
         .html(labelAttribute);
 
     var precinctName = infolabel.append("div")
         .attr("class", "labelname")
-        .html(props.WARD);
+        .html(props.WardName);
 };
 
 //function to move info label with mouse
